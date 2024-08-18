@@ -1,0 +1,12 @@
+pipeline
+{
+    agent any
+
+    stages
+    {
+        stage('Setup')
+        {
+            sh 'echo "Welcome Board." '
+        }
+    }
+}

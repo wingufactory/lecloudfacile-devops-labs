@@ -1,0 +1,19 @@
+FROM jenkins/inbound-agent:jdk21
+LABEL MAINTAINER="lecloudfacile"
+
+USER root
+# Install necessary packages and tools
+RUN apt-get update && \
+    apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg-agent \
+    software-properties-common \
+    lsb-release
+
+RUN curl -fsSL https://get.docker.com -o get-docker.sh && \
+    sh get-docker.sh
+
+
+USER jenkins
