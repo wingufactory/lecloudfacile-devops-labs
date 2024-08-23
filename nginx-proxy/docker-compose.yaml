@@ -11,3 +11,4 @@ services:
       - '80:80'
 networks:
   frontend:
+    name: frontend
