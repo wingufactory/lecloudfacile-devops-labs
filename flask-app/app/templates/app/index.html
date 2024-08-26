@@ -1,1 +1,24 @@
 {% extends "base.html" %}
+
+{% block content %}
+
+<div class="col-sm-6 col-md-5 col-lg-4">
+    <div class="card" >
+        <img src="{{url_for('static', filename='image/profile.jpg')}}" class="card-img-top" alt="...">
+        <div class="card-body">
+            <h5 class="card-title">Coach LCF</h5>
+        </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item">Formateur DevOps</li>
+        </ul>
+        <div class="card-body">
+            <a href="https://lecloudfacile.com/" class="card-link">Website</a>
+            <a href="https://www.linkedin.com/company/lecloudfacile" class="card-link">Linkedin</a>
+        </div>
+    </div>
+</div>
+<div class="col-sm-6 col-md-7 col-lg-8">
+    <img src="{{url_for('static', filename='image/content.jpeg')}}" width="100%"/>
+</div>
+
+{% endblock %}

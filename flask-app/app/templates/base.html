@@ -8,12 +8,11 @@
     <body>
       
       <div class="container">
-        <div style="background-color: #d38700">
+        <div>
           <a class="navbar-brand" href="#" >
-            <img src="{{url_for('static', filename='image/logo.png')}}"  alt="">
+            <img src="{{url_for('static', filename='image/logo.png')}}" width="30%"  alt="">
           </a>
         </div>
-        <br><br>
         <nav class="navbar navbar-expand-lg  navbar-light" style="background-color: black;">
           <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -27,10 +26,6 @@
               <li class="nav-item">
                 <a class="nav-link" href="{{  url_for('ProgrammePage') }}" style=" color: white">Programmes |</a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{{  url_for('AboutPage') }}" style=" color: white">A propos |</a>
-              </li>
-              
             </ul>
           </div>
         </nav>
