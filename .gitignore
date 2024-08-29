@@ -1,7 +1,11 @@
 .env
 springboot-react-app/docker-compose.yaml
+flask-app/Dockerfile
 node_modules/
 .terraform.lock.hcl
 .terraform/
 *.tfstate
 *.tfstate.backup
+*.tfvars
+*.DS_Store$
+*-lock.json
