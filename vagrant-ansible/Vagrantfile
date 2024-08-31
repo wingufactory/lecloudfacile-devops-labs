@@ -1,0 +1,62 @@
+# Configuration du fichier Vagrant en utilisant la version 2 du format de configuration
+Vagrant.configure(2) do |config|
+
+  # Définition d'une machine virtuelle nommée "ansible_instance"
+  config.vm.define "ansible_instance" do |ansible_instance|
+    
+    # spécifie l'image de base à utiliser pour la VM
+    ansible_instance.vm.box = "ubuntu/bionic64"
+    
+    #Attribue le nom d'hôte "ansible_instance" à la machine virtuelle
+    ansible_instance.vm.hostname = "ansible_instance"
+
+    # Reférencie install_ansible.sh pour installer et configurer les composants de cette VM
+    ansible_instance.vm.provision "shell", path: "install_ansible.sh"
+    
+    # Configure un réseau privé avec une adresse IP fixe pour cette machine virtuelle
+    ansible_instance.vm.network "private_network", ip: "192.168.10.1"
+    
+    # Spécifie la configuration du fournisseur, ici "VirtualBox"
+    ansible_instance.vm.provider "virtualbox" do |v|
+      
+      # Nomme la machine virtuelle "ansible_instance" dans VirtualBox
+      v.name = "ansible_instance"
+      
+      # Alloue 1024 Mo de mémoire vive à la machine virtuelle
+      v.memory = 1024
+      
+      # Alloue 1 CPU à la machine virtuelle
+      v.cpus = 1
+    end
+  end
+
+  # Définition d'une machine virtuelle nommée "target_ansible"
+  config.vm.define "target_instance" do |target_instance|
+    
+    # spécifie l'image de base à utiliser pour la VM
+    target_instance.vm.box = "ubuntu/bionic64"
+
+    #Attribue le nom d'hôte "target_instance" à la machine virtuelle
+    target_instance.vm.hostname = "target_instance"
+
+    # Reférencie configure_servers_target.sh pour installer et configurer les composants de cette VM
+    target_instance.vm.provision "shell", path: "configure_servers_target.sh"
+
+    # Configure un réseau privé avec une adresse IP fixe pour cette machine virtuelle
+    target_instance.vm.network "private_network", ip: "192.168.10.2"
+
+    # Spécifie la configuration du fournisseur, ici "VirtualBox"
+    target_instance.vm.provider "virtualbox" do |v|
+
+      # Nomme la machine virtuelle "target_instance" dans VirtualBox
+      v.name = "target_instance"
+
+      # Alloue 1024 Mo de mémoire vive à la machine virtuelle
+      v.memory = 1024
+
+      # Alloue 1 CPU à la machine virtuelle
+      v.cpus = 1
+    end
+  end
+
+end
