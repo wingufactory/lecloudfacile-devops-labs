@@ -29,5 +29,5 @@ sudo chown -R ansible:ansible ansible
 sudo echo "ansible  ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # DNS
-sudo echo "192.168.10.1 ansible" >> /etc/hosts
-sudo echo "192.168.10.2 target" >> /etc/hosts
+sudo echo "192.168.10.10 ansible.lcf.io" >> /etc/hosts
+sudo echo "192.168.10.20 target.lcf.io" >> /etc/hosts
