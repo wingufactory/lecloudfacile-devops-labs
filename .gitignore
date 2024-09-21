@@ -2,6 +2,8 @@
 springboot-react-app/docker-compose.yaml
 flask-app/Dockerfile
 node_modules/
+*.pyc
+09-exploitation/airflow/logs/*
 vagrant-ansible/ubuntu-bionic-18.04-cloudimg-console.log
 .terraform.lock.hcl
 .vagrant
