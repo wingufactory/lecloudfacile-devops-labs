@@ -1,10 +1,16 @@
 version: "3.8"
+networks:
+  gridnetwork:
+    driver: bridge
+
 services:
   chrome:
     image: selenium/node-chrome:129.0-20240922
     shm_size: 2gb
     depends_on:
       - selenium-hub
+    networks:
+      - gridnetwork
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
@@ -17,6 +23,8 @@ services:
     shm_size: 2gb
     depends_on:
       - selenium-hub
+    networks:
+      - gridnetwork
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
@@ -29,6 +37,8 @@ services:
     shm_size: 2gb
     depends_on:
       - selenium-hub
+    networks:
+      - gridnetwork
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
@@ -39,6 +49,8 @@ services:
   selenium-hub:
     image: selenium/hub:latest
     container_name: selenium-hub
+    networks:
+      - gridnetwork
     ports:
       - "4442:4442"
       - "4443:4443"
