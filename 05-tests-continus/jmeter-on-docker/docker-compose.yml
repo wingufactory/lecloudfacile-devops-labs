@@ -1,0 +1,40 @@
+services:
+  controler:
+    build:
+      dockerfile: Dockerfile
+      target: jmeter-controler
+    tty: true
+    ports:
+      - "60000"
+    networks:
+      - jm-network
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+      placement:
+          constraints: [node.role == manager]
+  worker:
+    build:
+     dockerfile: Dockerfile
+     target: jmeter-worker
+    tty: true
+    networks:
+      - jm-network
+    ports:
+      - "50000"
+      - "1099"
+    deploy:
+      replicas: 2
+      mode: global
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints: [node.role == worker]
+networks:
+  jm-network:
