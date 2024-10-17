@@ -8,6 +8,8 @@ services:
       - "60000"
     networks:
       - jm-network
+    volumes:
+      - reports:/jmeter/apache-jmeter-5.6.3/bin/reports
     deploy:
       restart_policy:
         condition: on-failure
@@ -28,7 +30,6 @@ services:
       - "1099"
     deploy:
       replicas: 2
-      mode: global
       restart_policy:
         condition: on-failure
         delay: 10s
@@ -36,5 +37,23 @@ services:
         window: 120s
       placement:
         constraints: [node.role == worker]
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8081:80"
+    networks:
+      - jm-network
+    volumes:
+      - reports:/usr/share/nginx/html
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+
 networks:
   jm-network:
+volumes:
+  reports:
