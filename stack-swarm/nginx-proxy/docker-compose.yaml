@@ -1,0 +1,20 @@
+services:
+  nginx-reverse-proxy:
+    image: nginx
+    networks:
+      - frontend
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d
+    restart: always
+    ports:
+      - '80:80'
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      replicas: 2
+      placement:
+        constraints: [node.role == manager]
+networks:
+  frontend:
+    name: frontend

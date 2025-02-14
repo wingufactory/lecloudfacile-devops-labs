@@ -1,0 +1,138 @@
+# Indication de la version de l'API
+version: '3.8'
+
+# Création d'un volume nommé <pgdata> pour la persistance des données. Il sera utilisé par la base de données Postgresql.
+volumes:
+  pgdata:
+    name: pgdata
+
+
+# Création d'un réseau nommé <app-network> pour l'ensemble des conteneurs qui vont appartenir à la stack et déclaration du réseau <frontend> utilisé par le proxy nginx.
+networks:
+  app-network:
+    name: app-network
+  frontend:
+    name: frontend
+    external: true
+
+# Déclaration liste des services
+services:
+
+  # Service database: Base de données Postgresql 
+  database:
+
+
+    # Choix de l'image
+    image: postgres:16.2-alpine
+
+    # Déclaration des variables d'environnement requises
+    environment:
+      POSTGRES_USER: 'lecloudfacile'
+      POSTGRES_PASSWORD: 'TwwsVdt9INkUATx'
+      POSTGRES_DB: 'lecloudfacile'
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "lecloudfacile"]
+      interval: 10s
+      retries: 5
+
+    # Montage du volume pour la persitence des données
+    volumes:
+      - pgdata:/var/lib/postgresql/data 
+
+    # Attachement du service au réseau <app-network> 
+    networks:
+      - app-network
+
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+  # Service adminer: Client web pour B-base de données
+  adminer:
+
+
+    # Choix de l'image
+    image: adminer
+
+    # Indiquer que ce service dépend du service <database>
+    depends_on:
+      - database
+
+    # Attachement du service aux réseaux <app-network> pour communiquer avce la DB et <frontend> pour communiquer avec le proxy
+    networks:
+      - app-network
+      - frontend
+
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+  # Service backend: Application springboot contenant le logique métier et exposant des apis pour faciliter la communication.
+  backend:
+
+
+    # Choix de l'image
+    image: papamfall/springboot-react-app-backend:1.0.0
+
+    # Indiquer que ce service dépend du service <database>
+    depends_on:
+      - database
+
+    # Déclaration des variables d'environnement requises
+    environment:
+      SPRING_DATASOURCE_URL: 'jdbc:postgresql://database:5432/lecloudfacile'
+      SPRING_DATASOURCE_USERNAME: 'lecloudfacile'
+      SPRING_DATASOURCE_PASSWORD: 'TwwsVdt9INkUATx'
+      FRONTEND_APP_URL: 'http://app.moodboard.xyz'
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+    # Attachement du service aux réseaux <app-network> pour communiquer avce la DB et <frontend> pour communiquer avec le proxy
+    networks:
+      - app-network
+      - frontend
+
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+
+  # Service frontend: Application react qui exposent les pages de l'application.
+  frontend:
+
+
+    # Choix de l'image
+    image: papamfall/springboot-react-app-frontend:1.0.0
+
+    # Déclaration des variables d'environnement requises
+    environment:
+      REACT_APP_API_URL: "http://backend:8080/api/feedback"
+
+    # Indiquer que ce service dépend du service <backend>
+    depends_on:
+      - backend
+
+    # Attachement du service aux réseaux <app-network> pour communiquer avce la DB et <frontend> pour communiquer avec le proxy
+    networks:
+      - app-network
+      - frontend
+
+
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
