@@ -16,8 +16,7 @@ terraform apply
 
 ansible -a "cat /var/lib/jenkins/secrets/initialAdminPassword" tag_Name_jenkins_master_tf -u ec2-user -b
 
-ssh -i ~/.ssh/id_jdc ec2-user@34.237.138.170
-
+ssh -i ~/.ssh/id_jdc ec2-user@JenkinsPublicIP
 
 terraform destroy --auto-approve
 ```
