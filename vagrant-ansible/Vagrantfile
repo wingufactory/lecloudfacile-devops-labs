@@ -5,6 +5,9 @@ Vagrant.configure(2) do |config|
   config.vm.define "ansible" do |ansible|
     
     # spécifie l'image de base à utiliser pour la VM
+
+    #Utiliser l'image "net9/ubuntu-24.04-arm64"  pour les mac m1,4 (arm)
+
     ansible.vm.box = "ubuntu/bionic64"
     
     #Attribue le nom d'hôte "ansible" à la machine virtuelle
