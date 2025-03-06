@@ -16,7 +16,31 @@ Avant de commencer, assurez-vous d’avoir :
 
 ---
 
-## **2. Étapes du déploiement**  
+## **2. Structure du dépôt Git**  
+
+Le répertoire contient les fichiers suivants :  
+
+```
+terraform-ansible-aws/
+├── alb.tf                 # Configuration du Load Balancer AWS
+├── ansible.cfg            # Configuration Ansible
+├── ansible_templates      # Répertoire contenant les fichiers Ansible
+│   ├── inventory_aws/     # Inventaire dynamique des ressources AWS
+│   │   └── tf_aws_ec2.yml # Inventaire AWS pour Ansible
+│   └── jenkins-master-sample.yml # Playbook pour configurer Jenkins
+├── backend.tf             # Définition du backend distant Terraform (S3)
+├── instances.tf           # Définition des instances EC2
+├── networks.tf            # Configuration du réseau AWS (VPC, Subnet)
+├── output.tf              # Variables de sortie (IP publiques, DNS, etc.)
+├── providers.tf           # Déclaration des providers (AWS)
+├── readme.md              # Ce fichier
+├── security_groups.tf     # Configuration des règles de sécurité (SG)
+└── variables.tf           # Déclaration des variables Terraform
+```
+
+---
+
+## **3. Étapes du déploiement**  
 
 ### **1️⃣ Nettoyage de l’état Terraform (si nécessaire)**  
 ```bash
@@ -123,30 +147,6 @@ terraform destroy --auto-approve
 ➡️ Cette commande **supprime toutes les ressources** créées par Terraform, évitant des coûts inutiles.  
 
 📌 **L’option `--auto-approve` permet de bypasser la confirmation manuelle**.  
-
----
-
-## **3. Structure du dépôt Git**  
-
-Le répertoire contient les fichiers suivants :  
-
-```
-terraform-ansible-aws/
-├── alb.tf                 # Configuration du Load Balancer AWS
-├── ansible.cfg            # Configuration Ansible
-├── ansible_templates      # Répertoire contenant les fichiers Ansible
-│   ├── inventory_aws/     # Inventaire dynamique des ressources AWS
-│   │   └── tf_aws_ec2.yml # Inventaire AWS pour Ansible
-│   └── jenkins-master-sample.yml # Playbook pour configurer Jenkins
-├── backend.tf             # Définition du backend distant Terraform (S3)
-├── instances.tf           # Définition des instances EC2
-├── networks.tf            # Configuration du réseau AWS (VPC, Subnet)
-├── output.tf              # Variables de sortie (IP publiques, DNS, etc.)
-├── providers.tf           # Déclaration des providers (AWS)
-├── readme.md              # Ce fichier
-├── security_groups.tf     # Configuration des règles de sécurité (SG)
-└── variables.tf           # Déclaration des variables Terraform
-```
 
 ---
 
