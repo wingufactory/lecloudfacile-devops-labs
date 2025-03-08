@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name jenkins.lecloudfacile.io;
+    server_name jenkins.lcf.io;
 
     location / {
         proxy_pass http://jenkins:8080;
