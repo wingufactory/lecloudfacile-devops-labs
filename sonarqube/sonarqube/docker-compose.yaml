@@ -1,0 +1,77 @@
+# Indication de la version de l'API
+version: '3.8'
+
+# Création d'un volume nommé <sonarqube-data> pour la persistance des données.
+
+volumes:
+  sonarqube-data:
+    name: sonarqube-data
+  sonarqube-postgres-data:
+    name: sonarqube-postgres-data
+
+# Création d'un réseau nommé <sonarqube-network> pour l'ensemble des conteneurs qui vont appartenir à la stack et déclaration du réseau <frontend> utilisé par le proxy nginx.
+
+networks:
+  sonarqube-network:
+    name: sonarqube-network
+  frontend:
+    name: frontend
+    external: true
+
+# Déclaration liste des services
+services:
+
+  # Service sonarqube-database: Instance postgres pour la persistence des données Sonar
+  sonarqube-database:
+
+    # Nom du comteneur
+    container_name: sonarqube-database
+
+    # Choix de l'image
+    image: "postgres:16.4"
+
+    #Montage du volume pour la persitence des données
+    volumes:
+      - sonarqube-postgres-data:/var/lib/postgresql/data
+
+    # Définition des variables d'environnement contenant le nom d'utilisateur de la base Postgres et le mot de passe associé
+    environment:
+      - POSTGRES_PASSWORD=passer123
+      - POSTGRES_USER=sonar
+
+    # Attachement du service au réseaux sonarqube-network
+    networks:
+      sonarqube-network:
+        aliases:
+          - sonarqube-database
+
+  # Service sonarqube: Instance sonarqube
+  sonarqube:
+
+    # Choix de l'image
+    image: sonarqube:10.7.0-community
+
+    # Nom du comteneur
+    container_name: sonarqube
+
+    # Attachement du service aux réseaux sonarqube-network & frontend
+    networks:
+      - sonarqube-network
+      - frontend
+
+    # Montage du volume pour la persitence des données et du socket docker pour autoriser le docker-in-docker
+    volumes:
+      - sonarqube-data:/opt/sonarqube
+
+    # Définition des variables d'environnement pour la connexion à la base de données
+    environment:
+      - SONAR_JDBC_USERNAME=sonar
+      - SONAR_JDBC_PASSWORD=passer123
+      - SONAR_JDBC_URL=jdbc:postgresql://sonarqube-database/sonar?characterEncoding=utf8
+      - stop-timeout=3600
+    #ports:
+    #  - "9001:9000"
+
+    # Toujours forcer le rédémarrage du conteneur en cas de problème.
+    restart: always
+

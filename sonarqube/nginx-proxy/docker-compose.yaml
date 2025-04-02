@@ -1,0 +1,14 @@
+services:
+  nginx-reverse-proxy:
+    container_name: proxy
+    image: nginx
+    networks:
+      - frontend
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d
+    restart: always
+    ports:
+      - '80:80'
+networks:
+  frontend:
+    name: frontend

@@ -1,0 +1,49 @@
+# Indication de la version de l'API
+version: '3.8'
+
+# Création d'un volume nommé <jenkins-data> pour la persistance des données.
+
+volumes:
+  jenkins-data:
+    name: jenkins-data
+
+# Création d'un réseau nommé <jenkins-network> pour l'ensemble des conteneurs qui vont appartenir à la stack et déclaration du réseau <frontend> utilisé par le proxy nginx.
+
+networks:
+  jenkins-network:
+    name: jenkins-network
+  frontend:
+    name: frontend
+    external: true
+
+# Déclaration liste des services
+services:
+
+  # Service jenkins: Instance Jenkins
+  jenkins:
+
+    # Choix de l'image
+    image: jenkins/jenkins:jdk21
+
+    # Nom du comteneur
+    container_name: jenkins
+
+    # Attachement du service aux réseaux jenkins-network & frontend
+    networks:
+      - jenkins-network
+      - frontend
+
+    # Montage du volume pour la persitence des données et du socket docker pour autoriser le docker-in-docker
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    # Toujours forcer le rédémarrage du conteneur en cas de problème.
+    restart: always
+
+    # Activation du mode priviligié sur le conteneur
+    privileged: true
+
+    # Démarrage du conteneur en mode root
+    user: root
+
