@@ -3,7 +3,7 @@ server {
     server_name flask-app.lcf.io;
     client_max_body_size 2G; 
     location / {
-        proxy_pass http://flask-app-prod:8086;
+        proxy_pass http://flask-app-prod:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
