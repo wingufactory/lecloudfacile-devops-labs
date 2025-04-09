@@ -1,0 +1,116 @@
+pipeline {
+    agent { label 'python-agent' }
+
+    environment {
+        SCANNER_HOME = tool 'sonar-lcf'
+        DOCKER_IMAGE = 'flaskapp-image'
+        DOCKER_TAG = 'dev-SNAPSHOT'
+    }
+
+    environment {
+    	// Répertoire d'installation du scanner SonarQube déclaré dans Jenkins
+    	SCANNER_HOME = tool 'sonar-lcf'
+
+    	// Nom de base de l'image Docker de l'application
+    	DOCKER_IMAGE = 'flaskapp-image'
+
+    	// Tag de version utilisé pour l'environnement de développement
+    	DOCKER_TAG = 'dev-SNAPSHOT'
+}
+
+    stages {
+
+        // Récupération du code source depuis le dépôt GitHub
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        // Exécution des tests unitaires avec Pytest + génération du rapport de couverture avec Coverage
+        stage('Run Pytest + Coverage') {
+            steps {
+                sh '''
+                    pip3 install --break-system-packages -r requirements.txt
+                    pytest
+                    coverage run -m pytest
+                    coverage report
+                    coverage xml
+                '''
+            }
+        }
+
+        // Analyse de la qualité du code et du coverage avec SonarQube
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv(credentialsId: 'sonar', installationName: 'Sonar') {
+                    sh "${SCANNER_HOME}/bin/sonar-scanner"
+                }
+            }
+        }
+
+        // Construction de l'image Docker de l'application Flask avec le tag 'dev-SNAPSHOT'
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .'
+            }
+        }
+
+        // Scan de sécurité de l'image Docker avec Trivy (affichage des vulnérabilités sans bloquer le pipeline)
+        stage('Trivy Scan') {
+            steps {
+                sh '''
+                    trivy image \
+                      --exit-code 0 \
+                      --severity HIGH,CRITICAL \
+                      ${DOCKER_IMAGE}:${DOCKER_TAG}
+                '''
+            }
+        }
+
+        // Push de l'image Docker vers le registre Harbor avec authentification
+        stage('Push to Harbor') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: "token-harbor", 
+                    usernameVariable: "DOCKER_USER", 
+                    passwordVariable: "DOCKER_PASSWORD"
+                )]) {
+                    sh '''
+                        echo "$DOCKER_PASSWORD" | docker login registry.lcf.io -u "$DOCKER_USER" --password-stdin
+                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} registry.lcf.io/flask-app/${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker push registry.lcf.io/flask-app/${DOCKER_IMAGE}:${DOCKER_TAG}
+                    '''
+                }
+            }
+        }
+
+        // Déploiement de l'image en environnement de développement (port 8085)
+        stage('Simulate Dev Deployment') {
+            steps {
+                sh '''
+                    docker stop flask-app-dev || true && docker rm flask-app-dev || true
+                    docker run -d --name flask-app-dev -p 8085:8000 registry.lcf.io/flask-app/${DOCKER_IMAGE}:${DOCKER_TAG}
+                '''
+            }
+        }
+    }
+
+    post {
+        // Affichage d'un message de succès dans Jenkins
+        success {
+            echo "✅ Déploiement en DEV terminé"
+        }
+
+        // Affichage d'un message d'échec dans Jenkins
+        failure {
+            echo "❌ Échec du déploiement en DEV"
+        }
+
+        // Envoi d'une notification Slack dans tous les cas (succès ou échec)
+        always {
+            slackSend channel: "jenkins-lcf",
+                message: "🛠️  Pipeline: *${env.JOB_NAME}* #${env.BUILD_NUMBER} | 🔗 <${env.BUILD_URL}|Voir build> | ✅ *Statut:* ${currentBuild.currentResult}"
+        }
+    }
+}

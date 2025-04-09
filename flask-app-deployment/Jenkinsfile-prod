@@ -1,0 +1,86 @@
+pipeline {
+    agent { label 'python-agent' }
+
+    environment {
+        // Nom de l'image Docker à manipuler
+        DOCKER_IMAGE = 'flaskapp-image'
+        
+        // Tag source à récupérer depuis Harbor (image générée côté dev)
+        SNAPSHOT_TAG = 'dev-SNAPSHOT'
+        
+        // Tag de release transmis en paramètre (ex : v1.0.0)
+        RELEASE_TAG = "${params.RELEASE_TAG}"
+
+        // Adresse du registre Docker (Harbor)
+        REGISTRY = 'registry.lcf.io'
+
+        // Nom du repository de l'image sur Harbor
+        REPO = 'flask-app'
+    }
+
+    stages {
+
+        // Récupération de l'image SNAPSHOT existante depuis Harbor
+        stage('Pull Snapshot Image from Harbor') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: "token-harbor",
+                    usernameVariable: "DOCKER_USER",
+                    passwordVariable: "DOCKER_PASSWORD"
+                )]) {
+                    sh '''
+                        echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u "$DOCKER_USER" --password-stdin
+                        docker pull $REGISTRY/$REPO/${DOCKER_IMAGE}:${SNAPSHOT_TAG}
+                    '''
+                }
+            }
+        }
+
+        // Retag de l'image SNAPSHOT avec le tag de version (RELEASE_TAG) et push sur Harbor
+        stage('Tag and Push as Release') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: "token-harbor",
+                    usernameVariable: "DOCKER_USER",
+                    passwordVariable: "DOCKER_PASSWORD"
+                )]) {
+                    sh '''
+                        docker tag $REGISTRY/$REPO/${DOCKER_IMAGE}:${SNAPSHOT_TAG} $REGISTRY/$REPO/${DOCKER_IMAGE}:${RELEASE_TAG}
+                        docker push $REGISTRY/$REPO/${DOCKER_IMAGE}:${RELEASE_TAG}
+                    '''
+                }
+            }
+        }
+
+        // Déploiement de l'image versionnée en environnement de production (exécution locale sur port 8086)
+        stage('Deploy to Production') {
+            steps {
+                sh '''
+                    docker stop myawesome-flask-app-prod || true
+                    docker rm myawesome-flask-app-prod || true
+
+                    docker run -d --name myawesome-flask-app-prod -p 8086:8000 \
+                      $REGISTRY/$REPO/${DOCKER_IMAGE}:${RELEASE_TAG}
+                '''
+            }
+        }
+    }
+
+    post {
+        // Affichage d'un message de succès dans Jenkins
+        success {
+            echo "✅ Déploiement en PROD terminé pour la release ${RELEASE_TAG}"
+        }
+
+        // Affichage d'un message d'échec dans Jenkins
+        failure {
+            echo "❌ Échec du déploiement en PROD pour la release ${RELEASE_TAG}"
+        }
+
+        // Envoi d'une notification Slack quel que soit le résultat
+        always {
+            slackSend channel: "jenkins-lcf", 
+                message: "🛠️ Pipeline: *${env.JOB_NAME}* #${env.BUILD_NUMBER} | 🔗 <${env.BUILD_URL}|Voir build> | ✅ *Statut:* ${currentBuild.currentResult}"
+        }
+    }
+}
