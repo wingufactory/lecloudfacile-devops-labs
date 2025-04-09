@@ -1,4 +1,6 @@
 pipeline {
+
+    // Utilisation du nouvel agent cloud Docker Python
     agent { label 'python-agent' }
 
     environment {
@@ -80,7 +82,7 @@ pipeline {
         // Envoi d'une notification Slack quel que soit le résultat
         always {
             slackSend channel: "jenkins-lcf", 
-                message: "🛠️ Pipeline: *${env.JOB_NAME}* #${env.BUILD_NUMBER} | 🔗 <${env.BUILD_URL}|Voir build> | ✅ *Statut:* ${currentBuild.currentResult}"
+                message: "🛠️ Pipeline: *${env.JOB_NAME}* #${env.BUILD_NUMBER} | 🔗 <${env.BUILD_URL}|Voir build> | *Statut:* ${currentBuild.currentResult}"
         }
     }
 }

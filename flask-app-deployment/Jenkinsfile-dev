@@ -1,11 +1,7 @@
 pipeline {
-    agent { label 'python-agent' }
 
-    environment {
-        SCANNER_HOME = tool 'sonar-lcf'
-        DOCKER_IMAGE = 'flaskapp-image'
-        DOCKER_TAG = 'dev-SNAPSHOT'
-    }
+    // Utilisation du nouvel agent cloud Docker Python
+    agent { label 'python-agent' }
 
     environment {
     	// Répertoire d'installation du scanner SonarQube déclaré dans Jenkins
@@ -16,7 +12,7 @@ pipeline {
 
     	// Tag de version utilisé pour l'environnement de développement
     	DOCKER_TAG = 'dev-SNAPSHOT'
-}
+    }
 
     stages {
 
@@ -90,7 +86,7 @@ pipeline {
             steps {
                 sh '''
                     docker stop flask-app-dev || true && docker rm flask-app-dev || true
-                    docker run -d --name flask-app-dev -p 8085:8000 registry.lcf.io/flask-app/${DOCKER_IMAGE}:${DOCKER_TAG}
+                    docker run -d --name flask-app-dev --network frontend -p 8085:8000 registry.lcf.io/flask-app/${DOCKER_IMAGE}:${DOCKER_TAG}
                 '''
             }
         }
@@ -110,7 +106,7 @@ pipeline {
         // Envoi d'une notification Slack dans tous les cas (succès ou échec)
         always {
             slackSend channel: "jenkins-lcf",
-                message: "🛠️  Pipeline: *${env.JOB_NAME}* #${env.BUILD_NUMBER} | 🔗 <${env.BUILD_URL}|Voir build> | ✅ *Statut:* ${currentBuild.currentResult}"
+                message: "🛠️  Pipeline: *${env.JOB_NAME}* #${env.BUILD_NUMBER} | 🔗 <${env.BUILD_URL}|Voir build> | *Statut:* ${currentBuild.currentResult}"
         }
     }
 }
