@@ -58,11 +58,10 @@ pipeline {
         stage('Deploy to Production') {
             steps {
                 sh '''
-                    docker stop myawesome-flask-app-prod || true
-                    docker rm myawesome-flask-app-prod || true
+                    docker stop flask-app-prod || true
+                    docker rm flask-app-prod || true
 
-                    docker run -d --name myawesome-flask-app-prod -p 8086:8000 \
-                      $REGISTRY/$REPO/${DOCKER_IMAGE}:${RELEASE_TAG}
+                    docker run -d --name flask-app-prod --network frontend $REGISTRY/$REPO/${DOCKER_IMAGE}:${RELEASE_TAG}
                 '''
             }
         }

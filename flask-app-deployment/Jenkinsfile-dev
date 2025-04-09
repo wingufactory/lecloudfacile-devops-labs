@@ -86,7 +86,7 @@ pipeline {
             steps {
                 sh '''
                     docker stop flask-app-dev || true && docker rm flask-app-dev || true
-                    docker run -d --name flask-app-dev --network frontend -p 8085:8000 registry.lcf.io/flask-app/${DOCKER_IMAGE}:${DOCKER_TAG}
+                    docker run -d --name flask-app-dev --network frontend registry.lcf.io/flask-app/${DOCKER_IMAGE}:${DOCKER_TAG}
                 '''
             }
         }
