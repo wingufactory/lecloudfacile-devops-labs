@@ -25,7 +25,7 @@ pipeline {
     }
 
     // Exécution des tests unitaires avec Pytest + génération du rapport de couverture avec Coverage
-    /*stage('Test & Coverage') {
+    stage('Test & Coverage') {
       when { expression { env.BRANCH_NAME.startsWith('feature/') } }
       steps {
         sh '''
@@ -36,31 +36,31 @@ pipeline {
           coverage xml
         '''
       }
-    }*/
+    }
 
     // Analyse de la qualité du code et du coverage avec SonarQube
-    /*stage('SonarQube Analysis') {
+    stage('SonarQube Analysis') {
       when { expression { env.BRANCH_NAME.startsWith('feature/') } }
       steps {
         withSonarQubeEnv(credentialsId: 'sonar', installationName: 'Sonar') {
           sh "${SCANNER_HOME}/bin/sonar-scanner"
         }
       }
-    }*/
+    }
 
-        // Construction de l'image Docker de l'application Flask avec le bon tag correspondant en foncton de la branche feature ou tag 
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    env.IMAGE_TAG = env.BRANCH_NAME.startsWith('v') ? env.BRANCH_NAME : 'dev-SNAPSHOT'
-                }
-                sh 'docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .'
-            }
+    // Construction de l'image Docker de l'application Flask avec le bon tag correspondant en foncton de la branche feature ou tag 
+    stage('Build Docker Image') {
+      steps {
+        script {
+              env.IMAGE_TAG = env.BRANCH_NAME.startsWith('v') ? env.BRANCH_NAME : 'dev-SNAPSHOT'
         }
+        sh 'docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .'
+      }
+    }
 
 
     // Scan de sécurité de l'image Docker avec Trivy (affichage des vulnérabilités sans bloquer le pipeline)
-    /*stage('Trivy Scan') {
+    stage('Trivy Scan') {
       when { expression { env.BRANCH_NAME.startsWith('feature/') } }
       steps {
         sh '''
@@ -69,7 +69,7 @@ pipeline {
             ${DOCKER_IMAGE}:${IMAGE_TAG}
         '''
       }
-    }*/
+    }
 
     // Push de l'image Docker vers le registre Harbor avec authentification
     stage('Push to Harbor') {
