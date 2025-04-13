@@ -120,7 +120,7 @@ pipeline {
                     passwordVariable: "GITHUB_TOKEN"
                 )]) {
           script {
-            def repo = "papemamadou91/flask-app"
+            def repo = "<user github>/flask-app-cd"
             def prTitle = "Auto PR from ${env.BRANCH_NAME}"
             def prBody = "Auto-créé par Jenkins après le deploy + health check"
             def prHead = env.BRANCH_NAME
@@ -167,7 +167,7 @@ pipeline {
                     sh '''
                         git config --global user.email "ci@lcf.io"
                         git config --global user.name "CI Bot"
-                        git remote set-url origin https://$GITHUB_TOKEN@github.com/$GITHUB_USER/flask-app.git
+                        git remote set-url origin https://$GITHUB_TOKEN@github.com/$GITHUB_USER/flask-app-cd.git
                         git tag $RELEASE_TAG
                         git push origin $RELEASE_TAG
 			sleep 10
