@@ -1,0 +1,221 @@
+pipeline {
+
+   // Utilisation du nouvel agent cloud Docker Python
+  agent { label 'python-agent' }
+
+  environment {
+    // Répertoire d'installation du scanner SonarQube déclaré dans Jenkins
+    SCANNER_HOME = tool 'sonar-lcf'
+
+    // Nom de base de l'image Docker de l'application
+    DOCKER_IMAGE = 'flaskapp-image'
+
+    // Registry et repo sur Harbor
+    REGISTRY = 'registry.lcf.io'
+    REPO = 'flask-app'
+  }
+
+  stages {
+
+    // Récupération du code source depuis le dépôt GitHub
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    // Exécution des tests unitaires avec Pytest + génération du rapport de couverture avec Coverage
+    /*stage('Test & Coverage') {
+      when { expression { env.BRANCH_NAME.startsWith('feature/') } }
+      steps {
+        sh '''
+          pip3 install --break-system-packages -r requirements.txt
+          pytest
+          coverage run -m pytest
+          coverage report
+          coverage xml
+        '''
+      }
+    }*/
+
+    // Analyse de la qualité du code et du coverage avec SonarQube
+    /*stage('SonarQube Analysis') {
+      when { expression { env.BRANCH_NAME.startsWith('feature/') } }
+      steps {
+        withSonarQubeEnv(credentialsId: 'sonar', installationName: 'Sonar') {
+          sh "${SCANNER_HOME}/bin/sonar-scanner"
+        }
+      }
+    }*/
+
+        // Construction de l'image Docker de l'application Flask avec le bon tag correspondant en foncton de la branche feature ou tag 
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    env.IMAGE_TAG = env.BRANCH_NAME.startsWith('v') ? env.BRANCH_NAME : 'dev-SNAPSHOT'
+                }
+                sh 'docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .'
+            }
+        }
+
+
+    // Scan de sécurité de l'image Docker avec Trivy (affichage des vulnérabilités sans bloquer le pipeline)
+    /*stage('Trivy Scan') {
+      when { expression { env.BRANCH_NAME.startsWith('feature/') } }
+      steps {
+        sh '''
+          trivy image --exit-code 0 \
+            --severity HIGH,CRITICAL \
+            ${DOCKER_IMAGE}:${IMAGE_TAG}
+        '''
+      }
+    }*/
+
+    // Push de l'image Docker vers le registre Harbor avec authentification
+    stage('Push to Harbor') {
+      steps {
+        withCredentials([usernamePassword(
+          credentialsId: "token-harbor",
+          usernameVariable: "DOCKER_USER",
+          passwordVariable: "DOCKER_PASSWORD"
+        )]) {
+          sh '''
+            echo "$DOCKER_PASSWORD" | docker login ${REGISTRY} -u "$DOCKER_USER" --password-stdin
+            docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${REGISTRY}/${REPO}/${DOCKER_IMAGE}:${IMAGE_TAG}
+            docker push ${REGISTRY}/${REPO}/${DOCKER_IMAGE}:${IMAGE_TAG}
+          '''
+        }
+      }
+    }
+
+    // Déploiement de l'image en environnement de développement (port 8085)
+    stage('Deploy to Dev') {
+      when { expression { env.BRANCH_NAME.startsWith('feature/') } }
+      steps {
+        sh '''
+          docker stop flask-app-dev || true
+          docker rm flask-app-dev || true
+          docker run -d --name flask-app-dev --network frontend \
+            ${REGISTRY}/${REPO}/${DOCKER_IMAGE}:${IMAGE_TAG}
+	  sleep 5
+        '''
+      }
+    }
+
+    // Health check sur le conteneur DEV
+    stage('Health Check') {
+      when { expression { env.BRANCH_NAME.startsWith('feature/') } }
+      steps {
+        sh 'curl -f http://flask-app-dev:8000'
+      }
+    }
+
+    // Création automatisée de Pull Request et merge via GitHub API
+    stage('Merge PR to Main (GitHub API)') {
+      when { expression { env.BRANCH_NAME.startsWith('feature/') } }
+      steps {
+        withCredentials([usernamePassword(
+                    credentialsId: "token-github-jenkins",
+                    usernameVariable: "GITHUB_USER",
+                    passwordVariable: "GITHUB_TOKEN"
+                )]) {
+          script {
+            def repo = "papemamadou91/flask-app"
+            def prTitle = "Auto PR from ${env.BRANCH_NAME}"
+            def prBody = "Auto-créé par Jenkins après le deploy + health check"
+            def prHead = env.BRANCH_NAME
+            def prData = """{
+              "title": "${prTitle}",
+              "body": "${prBody}",
+              "head": "${prHead}",
+              "base": "main"
+            }"""
+
+            sh """
+              echo "Création de la Pull Request..."
+              curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                https://api.github.com/repos/${repo}/pulls \
+                -d '${prData}'
+
+              echo "Fusion automatique (squash)..."
+              PR_NUMBER=\$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/${repo}/pulls | jq '.[] | select(.head.ref=="${prHead}") | .number')
+              curl -s -X PUT -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                https://api.github.com/repos/${repo}/pulls/\$PR_NUMBER/merge \
+                -d '{"merge_method":"squash"}'
+            """
+          }
+        }
+      }
+    }
+
+
+        // Création du tag Git avec auto-incrémentation de la version de release sur la date et heure du jour
+        stage('Create Git Tag') {
+            when { expression { env.BRANCH_NAME.startsWith('feature/') } }
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: "token-github-jenkins",
+                    usernameVariable: "GITHUB_USER",
+                    passwordVariable: "GITHUB_TOKEN"
+                )]) {
+                    script {
+                        def version = "v1.0." + new Date().format("yyyyMMddHHmm")
+                        env.RELEASE_TAG = version
+                    }
+                    sh '''
+                        git config --global user.email "ci@lcf.io"
+                        git config --global user.name "CI Bot"
+                        git remote set-url origin https://$GITHUB_TOKEN@github.com/$GITHUB_USER/flask-app.git
+                        git tag $RELEASE_TAG
+                        git push origin $RELEASE_TAG
+			sleep 10
+                    '''
+                }
+            }
+        }
+
+	// Déclenchement automatisé du job de déploiement sur la prod depuis le tag
+	stage('Trigger Deployment from Tag') {
+                when { expression { env.BRANCH_NAME.startsWith('feature/') } }
+    		steps {
+        		withCredentials([usernamePassword(
+            			credentialsId: 'jenkins-api-token',
+            			usernameVariable: 'JENKINS_USER',
+            			passwordVariable: 'JENKINS_TOKEN'
+        		)]) {
+            		script {
+                		def url = "http://jenkins:8080/job/flask-app/job/flask-app-cd/job/${RELEASE_TAG}/build"
+                		echo "Triggering tag job: ${url}"
+                		sh "curl -u \"$JENKINS_USER:$JENKINS_TOKEN\" -X POST ${url}"
+            		}
+        		}
+    		}
+	}
+
+    //  Déploiement en production à partir du tag
+    stage('Deploy to Prod') {
+	when {
+		tag pattern: "v\\d+", comparator: "REGEXP"
+             }
+      steps {
+        sh '''
+          docker stop flask-app-prod || true
+          docker rm flask-app-prod || true
+          docker run -d --name flask-app-prod --network frontend \
+            ${REGISTRY}/${REPO}/${DOCKER_IMAGE}:${IMAGE_TAG}
+        '''
+      }
+    }
+  }
+
+ // Notifications vers canal slack
+  post {
+    always {
+      slackSend channel: "jenkins-lcf",
+        message: "Pipeline *${env.JOB_NAME}* #${env.BUILD_NUMBER} | *${env.BRANCH_NAME}* → *${currentBuild.currentResult}* | 🔗 <${env.BUILD_URL}|Voir build>"
+    }
+  }
+}
+
