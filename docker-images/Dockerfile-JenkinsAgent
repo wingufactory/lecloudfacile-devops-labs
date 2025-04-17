@@ -1,0 +1,22 @@
+# Base officielle Jenkins inbound agent avec JDK 21
+FROM jenkins/inbound-agent:jdk21
+
+USER root
+
+#  Installer Docker CLI, Git, Curl, etc..
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    docker.io \
+    unzip \
+    jq \
+    ca-certificates \
+    lsb-release \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+#  Revenir à l'utilisateur Jenkins pour les jobs
+USER jenkins
+
+# Dossier de travail par défaut
+WORKDIR /home/jenkins
