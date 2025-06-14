@@ -5,7 +5,7 @@
 aws_region = "us-east-1"
 
 # Type d'instance EC2
-instance_type = "t3.micro"
+instance_type = "t3.medium"
 
 # Nom de votre paire de clés AWS (OBLIGATOIRE - remplacez par votre clé)
 key_name = "swarm_key"
