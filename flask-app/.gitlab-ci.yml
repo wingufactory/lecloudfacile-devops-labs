@@ -1,0 +1,95 @@
+
+stages:
+  - build
+  - package
+  - scan
+  - deploy
+
+variables:
+  IMAGE_NAME: "flask-app-test"
+  DOCKER_TAG: "$CI_COMMIT_SHORT_SHA"
+  GITLAB_REGISTRY: "$CI_REGISTRY_IMAGE/$IMAGE_NAME"
+  SERVER_IP: "54.242.249.86"
+  SERVER_USER: "ubuntu"
+
+# Étape 1 : Build  (sans Docker)
+build_python:
+  stage: build
+  image: python:3.12
+  script:
+    - echo "===> Installation des dépendances Flask"
+    - pip install --no-cache-dir -r requirements.txt
+    - echo "===> Lancement de l'application pour vérification"
+    - python app/app.py &
+    - sleep 5
+    - curl -f http://localhost:8000 || exit 1
+    - echo "Application started successfully."
+    - echo "===> Build terminé avec succès"
+  tags:
+    - docker
+
+# Étape 2 : Build avec Docker
+package_docker:
+  stage: package
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375 # Connect to the dind service
+    DOCKER_TLS_CERTDIR: "" # Disable TLS verification for simplicity in development
+  before_script:
+    - echo "===> Connexion au Docker Hub"
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    - echo "===> Connexion au GitLab Container Registry"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" $CI_REGISTRY --password-stdin
+  script:
+    - echo "===> Construction de l'image Docker"
+    - docker build -t $DOCKER_USERNAME/$IMAGE_NAME:$DOCKER_TAG -t $GITLAB_REGISTRY:$DOCKER_TAG .
+    - echo "===> Push de l'image vers Docker Hub"
+    - docker push $DOCKER_USERNAME/$IMAGE_NAME:$DOCKER_TAG
+    - echo "===> Push de l'image vers GitLab Container Registry"
+    - docker push $GITLAB_REGISTRY:$DOCKER_TAG
+  tags:
+    - docker
+
+scan:
+  stage: scan
+  image:
+    name: aquasec/trivy
+    entrypoint: [""]
+  variables:
+    TRIVY_AUTH_URL: $CI_REGISTRY
+    TRIVY_USERNAME: $CI_REGISTRY_USER
+    TRIVY_PASSWORD: $CI_REGISTRY_PASSWORD
+  script:
+    #- source ${VARIABLES_FILE}
+    - trivy --cache-dir .cache image
+      --exit-code 0
+      --severity HIGH,CRITICAL
+      --format table --output report.md
+      --vuln-type os
+      $GITLAB_REGISTRY:$DOCKER_TAG
+  artifacts:
+      name: "Scan Report ${CI_COMMIT_SHA}"
+      paths:
+        - report.md
+      expire_in: 7 days
+      #when: on_failure
+  cache:
+    paths:
+      - ".cache"
+  tags:
+    - docker
+
+# Étape 3 : Deploiement sur une Instance AWS EC2
+deploy_ec2:
+  stage: deploy
+  before_script:
+    - chmod 400 $SSH_KEY
+  script:
+    - ssh -o StrictHostKeyChecking=no -i $SSH_KEY $SERVER_USER@$SERVER_IP "
+        docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD &&
+        docker ps -aq | xargs docker stop | xargs docker rm &&
+        docker run -d -p 8000:8000 $DOCKER_USERNAME/$IMAGE_NAME:$DOCKER_TAG"
+  tags:
+    - docker
