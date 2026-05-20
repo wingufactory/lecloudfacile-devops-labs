@@ -4,7 +4,7 @@ pipeline {
     stages { 
         stage('SCM Checkout') {
             steps{
-           git branch: 'main', url: 'VOTRE_URL_GIT.git'
+           git branch: 'feature/update_labs_sonar', url: 'https://github.com/cheikht1/lecloudfacile-devops-labs.git'
             }
         }
         // run sonarqube test
