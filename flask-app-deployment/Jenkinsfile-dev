@@ -6,6 +6,8 @@ pipeline {
     environment {
     	// Répertoire d'installation du scanner SonarQube déclaré dans Jenkins
     	SCANNER_HOME = tool 'sonar-lcf'
+        SONAR_SCANNER_OPTS      = '-Xmx256m'
+        SONAR_SCANNER_JAVA_OPTS = '-Xmx256m'
 
     	// Nom de base de l'image Docker de l'application
     	DOCKER_IMAGE = 'flaskapp-image'
